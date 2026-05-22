@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-const apiUrl = (process.env.API_URL || 'https://votre-api-production.com/api').trim();
+const apiUrl = (process.env.API_URL || 'https://gsnbackend.onrender.com').trim();
 const targetPath = resolve('src/environments/environment.prod.ts');
 
 mkdirSync(dirname(targetPath), { recursive: true });
