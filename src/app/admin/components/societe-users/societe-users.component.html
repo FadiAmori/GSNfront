@@ -1,0 +1,112 @@
+<section class="users-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Utilisateurs</p>
+      <h1 class="page-title">{{ societeName }}</h1>
+      <p class="page-subtitle">Liste des utilisateurs de cette société.</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" routerLink="/admin/societes">← Retour</a>
+      <button type="button" class="btn-primary" (click)="openCreate()">+ Ajouter</button>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage" class="alert-error" role="alert">{{ errorMessage }}</p>
+  <p *ngIf="loading" class="loading-text">Chargement…</p>
+
+  <div *ngIf="!loading" class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-nom">Nom</th>
+          <th class="col-prenom">Prénom</th>
+          <th class="col-email">Email</th>
+          <th class="col-tel">Téléphone</th>
+          <th class="col-role">Rôle</th>
+          <th class="col-statut">Statut</th>
+          <th class="col-action">Modifier</th>
+          <th class="col-action">Supprimer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="users.length === 0">
+          <td colspan="8" class="empty-row">Aucun utilisateur pour cette société.</td>
+        </tr>
+        <tr *ngFor="let user of users">
+          <td class="cell-text">{{ user.nom }}</td>
+          <td class="cell-text">{{ user.prenom }}</td>
+          <td class="cell-text">{{ user.email }}</td>
+          <td class="cell-text">{{ user.telephone || '—' }}</td>
+          <td>{{ getRoleLabel(user.role) }}</td>
+          <td class="cell-statut">
+            <span class="badge" [class.badge-active]="user.active">
+              {{ user.active ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-edit" (click)="openEdit(user)">Modifier</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-danger" (click)="remove(user)">Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="showFormModal" class="modal-overlay" (click)="closeFormModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2>{{ modalTitle }}</h2>
+        <button type="button" class="btn-close" (click)="closeFormModal()">×</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+        <label>
+          Nom <span class="required">*</span>
+          <input type="text" formControlName="nom" />
+        </label>
+        <p *ngIf="isInvalid('nom')" class="field-error">Nom obligatoire.</p>
+
+        <label>
+          Prénom <span class="required">*</span>
+          <input type="text" formControlName="prenom" />
+        </label>
+        <p *ngIf="isInvalid('prenom')" class="field-error">Prénom obligatoire.</p>
+
+        <label>
+          Email <span class="required">*</span>
+          <input type="email" formControlName="email" />
+        </label>
+        <p *ngIf="isInvalid('email')" class="field-error">Email invalide ou manquant.</p>
+
+        <label>Téléphone <input type="text" formControlName="telephone" /></label>
+        <label>Adresse <input type="text" formControlName="adresse" /></label>
+
+        <label>
+          Mot de passe
+          <span *ngIf="!editing" class="required">*</span>
+          <input type="password" formControlName="password" />
+        </label>
+        <p *ngIf="isInvalid('password')" class="field-error">Mot de passe requis (4 caractères min.).</p>
+
+        <label>
+          Rôle
+          <select formControlName="role">
+            <option *ngFor="let r of roles" [ngValue]="r.value">{{ r.label }}</option>
+          </select>
+        </label>
+
+        <label class="checkbox-line">
+          <input type="checkbox" formControlName="active" />
+          Utilisateur actif
+        </label>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn-ghost" (click)="closeFormModal()">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+</section>

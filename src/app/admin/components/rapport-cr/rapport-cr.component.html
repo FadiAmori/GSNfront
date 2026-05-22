@@ -1,0 +1,118 @@
+<section class="tableau-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Rapport CR</p>
+      <h1 class="page-title">{{ societeName() }}</h1>
+      <p class="page-subtitle">Structure CR et affectation des lignes financières</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" [routerLink]="backLink()">← Retour</a>
+      <a class="btn-secondary" [routerLink]="produitsLink()">Produits</a>
+    </div>
+  </header>
+
+  <p *ngIf="loading()" class="loading-text">Chargement...</p>
+
+  <div class="grid-two" *ngIf="!loading() && !isSociete()">
+    <div class="card-box">
+      <h3>Catégorie CR</h3>
+      <form [formGroup]="categorieForm" (ngSubmit)="addCategorie()" class="form-stack">
+        <label>Nom <input type="text" formControlName="nom" /></label>
+        <button class="btn-primary" type="submit">Ajouter</button>
+      </form>
+    </div>
+
+    <div class="card-box">
+      <h3>Sous-catégorie CR</h3>
+      <form [formGroup]="sousCategorieForm" (ngSubmit)="addSousCategorie()" class="form-stack">
+        <label>Nom <input type="text" formControlName="nom" /></label>
+        <label>Catégorie
+          <select formControlName="categorieCrId">
+            <option [ngValue]="null">-- Choisir --</option>
+            <option *ngFor="let cat of categories(); trackBy: trackById" [ngValue]="cat.id">{{ cat.nom }}</option>
+          </select>
+        </label>
+        <button class="btn-primary" type="submit">Ajouter</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="excel-wrap" *ngIf="!loading()">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th rowspan="3">Produit</th>
+          <th rowspan="3">Code</th>
+          <th rowspan="3">Type client</th>
+          <th rowspan="3">Famille</th>
+          <th rowspan="3">% Poids</th>
+          <ng-container *ngFor="let cat of categories(); trackBy: trackById">
+            <th [attr.colspan]="categoryColspan(cat.id)">{{ cat.nom }}</th>
+          </ng-container>
+        </tr>
+        <tr>
+          <ng-container *ngFor="let cat of categories(); trackBy: trackById">
+            <ng-container *ngIf="(sousByCategory().get(cat.id ?? -1)?.length ?? 0) === 0; else sousRow">
+              <th [attr.colspan]="categoryColspan(cat.id)">—</th>
+            </ng-container>
+            <ng-template #sousRow>
+              <ng-container *ngFor="let sous of (sousByCategory().get(cat.id ?? -1) ?? []); trackBy: trackById">
+                <th [attr.colspan]="sousColspan(sous.id)">{{ sous.nom }}</th>
+              </ng-container>
+            </ng-template>
+          </ng-container>
+        </tr>
+        <tr>
+          <ng-container *ngFor="let col of flatColumns(); trackBy: trackByColumn">
+            <th>{{ col.line?.nom ?? '—' }}</th>
+          </ng-container>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of produits(); trackBy: trackById">
+          <td>{{ p.nom }}</td>
+          <td>{{ p.code }}</td>
+          <td>{{ typeClientName(p.typeClientId) }}</td>
+          <td>{{ familleName(p.familleProduitId) }}</td>
+          <td>{{ p.tauxPoids }}</td>
+          <ng-container *ngFor="let col of flatColumns(); trackBy: trackByColumn">
+            <td>{{ col.line ? (cellValueFor(p, col.line) | number:'1.0-2') : '—' }}</td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="excel-wrap" *ngIf="!loading() && !isSociete()">
+    <h3 class="section-title">Affectation des lignes financières vers sous-catégorie CR</h3>
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Nom ligne</th>
+          <th>Montant</th>
+          <th>Mois</th>
+          <th>Année</th>
+          <th>Sous-catégorie CR</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let l of lignes(); trackBy: trackById">
+          <td>{{ l.nom }}</td>
+          <td>{{ l.montant }}</td>
+          <td>{{ l.mois }}</td>
+          <td>{{ l.annee }}</td>
+          <td>
+            <select [ngModel]="l.sousCategorieCrId ?? null" (ngModelChange)="updateLigneSousCategorie(l, $event)">
+              <option [ngValue]="null">-- Choisir --</option>
+              <ng-container *ngFor="let cat of categories(); trackBy: trackById">
+                <optgroup [label]="cat.nom || ''">
+                  <option *ngFor="let sc of (sousByCategory().get(cat.id ?? -1) ?? []); trackBy: trackById" [ngValue]="sc.id">{{ sc.nom }}</option>
+                </optgroup>
+              </ng-container>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

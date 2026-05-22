@@ -1,0 +1,140 @@
+<section class="rapport-page">
+  <header class="page-header">
+    <div class="page-header__left">
+      <p class="eyebrow">Tableau calcule</p>
+      <h1>{{ societeName() }}</h1>
+      <p class="muted" *ngIf="!isSociete()">Montants repartis par mois selon les cles et formules.</p>
+      <p class="muted" *ngIf="isSociete()">Montants repartis par mois (lecture seule).</p>
+    </div>
+    <div class="actions-top">
+      <a class="btn ghost" [routerLink]="backLink()">← Retour</a>
+    </div>
+  </header>
+
+  <ng-container *ngIf="loading(); else calcLoaded">
+    <div class="loading-state">Chargement...</div>
+  </ng-container>
+
+  <ng-template #calcLoaded>
+    <ng-container *ngIf="!hasData(); else tableBlock">
+      <div class="empty-state">
+        <p>Aucune ligne financiere pour ce rapport.</p>
+      </div>
+    </ng-container>
+  </ng-template>
+
+  <ng-template #tableBlock>
+    <div class="accounting-table-wrapper">
+      <table class="accounting-table">
+        <thead>
+          <tr class="accounting-table__head">
+            <th>Ligne</th>
+            <th>Coef</th>
+            <th *ngFor="let m of months; trackBy: trackByMonth">{{ m }}</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <ng-container *ngFor="let item of topLevel(); trackBy: trackByTopLevel">
+            <ng-container *ngIf="item.kind === 'categorie'">
+              <tr class="category-row">
+                <td [attr.colspan]="months.length + 3" class="category-name">
+                  <strong>{{ item.categorie.nom }}</strong>
+                </td>
+              </tr>
+
+              <ng-container *ngFor="let sg of item.subGroups; trackBy: trackBySubGroup">
+                <tr class="subcategory-row" *ngIf="!sg.isCategoryLevel">
+                  <td [attr.colspan]="months.length + 3" class="subcategory-name">
+                    <em>{{ sg.sousCategorie.nom }}</em>
+                  </td>
+                </tr>
+
+                <ng-container *ngFor="let line of sg.allLines; trackBy: trackByLineItem">
+                  <tr *ngIf="line.type === 'financiere'" class="line-row">
+                    <td>{{ line.nom }}</td>
+                    <td>
+                      <select
+                        [ngModel]="formulas()[line.id ?? -1]?.coef ?? 'saisonaliteCA'"
+                        (ngModelChange)="updateCoef(line.id, $event)"
+                        [disabled]="isSociete()">
+                        <option value="saisonaliteCA">Saisonalite CA</option>
+                        <option value="saisonalitePoids">Saisonalite poids</option>
+                        <option value="clesCoutFixes">Cles cout fixes</option>
+                      </select>
+                      <div class="cell-sub">{{ coefLabelFor(line.id) }}</div>
+                    </td>
+
+                    <td *ngFor="let m of months; trackBy: trackByMonth">
+                      <div class="cell-main">{{ valueForItem(line, m) | number:'1.0-2' }}</div>
+                      <div class="cell-sub">
+                        Coef: {{ coefPercentFor(m, formulas()[line.id ?? -1]?.coef ?? 'saisonaliteCA') | number:'1.0-2' }}%
+                      </div>
+                    </td>
+                    <td class="total">{{ totalForItem(line) | number:'1.0-2' }}</td>
+                  </tr>
+
+                  <tr *ngIf="line.type === 'calculee'" class="calculated-line-row calculated-line-row--inplace">
+                    <td><em>{{ line.nom }}</em></td>
+                    <td>
+                      <select
+                        [ngModel]="calculeeFormulas()[line.id ?? -1]?.coef ?? 'saisonaliteCA'"
+                        (ngModelChange)="updateCalculeeCoef(line.id, $event)"
+                        [disabled]="isSociete()">
+                        <option value="saisonaliteCA">Saisonalite CA</option>
+                        <option value="saisonalitePoids">Saisonalite poids</option>
+                        <option value="clesCoutFixes">Cles cout fixes</option>
+                      </select>
+                      <div class="cell-sub">{{ calculeeCoefLabelFor(line.id) }}</div>
+                    </td>
+
+                    <td *ngFor="let m of months; trackBy: trackByMonth">
+                      <div class="cell-main">{{ valueForItem(line, m) | number:'1.0-2' }}</div>
+                      <div class="cell-sub">
+                        Coef: {{ coefPercentFor(m, calculeeFormulas()[line.id ?? -1]?.coef ?? 'saisonaliteCA') | number:'1.0-2' }}%
+                      </div>
+                    </td>
+                    <td class="total">{{ totalForItem(line) | number:'1.0-2' }}</td>
+                  </tr>
+                </ng-container>
+              </ng-container>
+            </ng-container>
+
+            <ng-container *ngIf="item.kind === 'calculee'">
+              <tr class="calculated-line-row calculated-line-row--orphan">
+                <td><em>{{ item.ligne.nom }}</em></td>
+                <td>
+                  <select
+                    [ngModel]="calculeeFormulas()[item.ligne.id ?? -1]?.coef ?? 'saisonaliteCA'"
+                    (ngModelChange)="updateCalculeeCoef(item.ligne.id, $event)"
+                    [disabled]="isSociete()">
+                    <option value="saisonaliteCA">Saisonalite CA</option>
+                    <option value="saisonalitePoids">Saisonalite poids</option>
+                    <option value="clesCoutFixes">Cles cout fixes</option>
+                  </select>
+                  <div class="cell-sub">{{ calculeeCoefLabelFor(item.ligne.id) }}</div>
+                </td>
+
+                <td *ngFor="let m of months; trackBy: trackByMonth">
+                  <div class="cell-main">{{ valueForItem(item.ligne, m) | number:'1.0-2' }}</div>
+                  <div class="cell-sub">
+                    Coef: {{ coefPercentFor(m, calculeeFormulas()[item.ligne.id ?? -1]?.coef ?? 'saisonaliteCA') | number:'1.0-2' }}%
+                  </div>
+                </td>
+                <td class="total">{{ totalForItem(item.ligne) | number:'1.0-2' }}</td>
+              </tr>
+            </ng-container>
+          </ng-container>
+        </tbody>
+
+        <tbody
+          cdkDropList
+          [cdkDropListData]="orphanCalculees()"
+          (cdkDropListDropped)="onCalculeeDropped($event)"
+          style="display:none">
+        </tbody>
+      </table>
+    </div>
+  </ng-template>
+</section>

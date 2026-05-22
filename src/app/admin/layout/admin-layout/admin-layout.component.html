@@ -1,0 +1,19 @@
+<div class="excel-app">
+  <app-admin-navbar
+    [adminName]="adminName"
+    (logoutClick)="onLogout()"
+  ></app-admin-navbar>
+
+  <div class="excel-body">
+    <app-admin-sidebar></app-admin-sidebar>
+    <main class="excel-main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+  <footer class="excel-statusbar">
+    <span>{{ statusMessage }}</span>
+    <span class="status-sep">|</span>
+    <span>Mode administrateur</span>
+  </footer>
+</div>

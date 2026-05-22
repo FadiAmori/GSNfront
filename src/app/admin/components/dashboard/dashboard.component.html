@@ -1,0 +1,65 @@
+<div class="db-root">
+  <div class="db-header">
+    <div>
+      <h1 class="db-title">Tableau de bord</h1>
+      <p class="db-sub">Vue d'ensemble — données en direct</p>
+    </div>
+
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card c1">
+      <div class="stat-icon g1">🏢</div>
+      <div class="stat-num">{{ nbSocietes }}</div>
+      <div class="stat-lbl">Sociétés</div>
+    </div>
+    <div class="stat-card c2">
+      <div class="stat-num">{{ nbRapportsSoc1 }}</div>
+      <div class="stat-lbl">Rapports (Société GSN)</div>
+    </div>
+    <div class="stat-card c3">
+      <div class="stat-num">{{ nbActives }}</div>
+      <div class="stat-lbl">Actives</div>
+      <div class="stat-chg">{{ nbInactives }} inactives</div>
+    </div>
+    <div class="stat-card c4">
+      <div class="stat-num">{{ nbAnnees }}</div>
+      <div class="stat-lbl">Années de données</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <p class="chart-title">Rapports par société</p>
+      <div style="position:relative;height:180px;"><canvas id="doughnutChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Statut des sociétés</p>
+      <div style="position:relative;height:180px;"><canvas id="squareChart"></canvas></div>
+    </div>
+    
+    <div class="chart-card1">
+      <p class="chart-title">Rapports par année</p>
+      <div style="position:relative;height:180px;width:100%;"><canvas id="lineChart"></canvas></div>
+    </div>
+  
+
+    <div class="table-card">
+      <div class="tbl-hdr">
+        <span class="tbl-title">Dernières activités</span>
+        <span class="tbl-count">{{ recentRows.length }} lignes</span>
+      </div>
+      <table class="excel-table">
+        <thead><tr><th>#</th><th>Société</th><th>Année</th><th>Statut</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let row of recentRows; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td>{{ row.societe }}</td>
+            <td>{{ row.annee }}</td>
+            <td><span class="status-pill" [class]="row.statutClass">{{ row.statut }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

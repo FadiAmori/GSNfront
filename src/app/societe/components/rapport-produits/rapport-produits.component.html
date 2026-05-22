@@ -1,0 +1,106 @@
+<section class="tableau-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Rapport CR</p>
+      <h1 class="page-title">{{ societeName() }}</h1>
+      <p class="page-subtitle">Type client, famille et produits</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" [routerLink]="backLink()">← Retour</a>
+      <a class="btn-secondary" [routerLink]="crLink()">CR</a>
+    </div>
+  </header>
+
+  <p *ngIf="loading()" class="loading-text">Chargement...</p>
+
+  <div class="grid-two" *ngIf="!loading() && !isSociete()">
+    <div class="card-box">
+      <h3>Type client</h3>
+      <form [formGroup]="typeClientForm" (ngSubmit)="addTypeClient()" class="form-stack">
+        <label>Nom <input type="text" formControlName="nom" /></label>
+        <label>Description <input type="text" formControlName="description" /></label>
+        <button class="btn-primary" type="submit">Ajouter</button>
+      </form>
+      <div class="pill-list">
+        <span class="pill" *ngFor="let tc of typeClients(); trackBy: trackById">{{ tc.nom }}</span>
+      </div>
+    </div>
+
+    <div class="card-box">
+      <h3>Famille produit</h3>
+      <form [formGroup]="familleForm" (ngSubmit)="addFamille()" class="form-stack">
+        <label>Nom <input type="text" formControlName="nom" /></label>
+        <label>Description <input type="text" formControlName="description" /></label>
+        <button class="btn-primary" type="submit">Ajouter</button>
+      </form>
+      <div class="pill-list">
+        <span class="pill" *ngFor="let f of familles(); trackBy: trackById">{{ f.nom }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-box" *ngIf="!loading()">
+    <h3>Produit</h3>
+    <form [formGroup]="produitForm" (ngSubmit)="saveProduit()" class="form-grid">
+      <label>Nom <input type="text" formControlName="nom" /></label>
+      <label>Code <input type="text" formControlName="code" /></label>
+      <label>Type client
+        <select formControlName="typeClientId">
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let tc of typeClients(); trackBy: trackById" [ngValue]="tc.id">{{ tc.nom }}</option>
+        </select>
+      </label>
+      <label>Famille
+        <select formControlName="familleProduitId">
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let f of familles(); trackBy: trackById" [ngValue]="f.id">{{ f.nom }}</option>
+        </select>
+      </label>
+      <label>Poids prévu <input type="number" formControlName="poidsPrevu" /></label>
+      <label>% Poids <input type="number" formControlName="tauxPoids" /></label>
+      <label>Tps unitaire <input type="number" formControlName="tpsUnitaire" /></label>
+      <label>Temps global <input type="number" formControlName="tempsGlobal" /></label>
+      <label>Cout MOD / h <input type="number" formControlName="coutMODParHeure" /></label>
+
+      <div class="row-actions" *ngIf="!isSociete()">
+        <button class="btn-primary" type="submit">{{ editingProduit() ? 'Mettre à jour' : 'Ajouter produit' }}</button>
+        <button class="btn-secondary" type="button" *ngIf="editingProduit()" (click)="cancelProduitEdit()">Annuler</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="excel-wrap" *ngIf="!loading() && produits().length > 0">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Code</th>
+          <th>Type client</th>
+          <th>Famille</th>
+          <th>Poids prévu</th>
+          <th>% Poids</th>
+          <th>Tps unitaire</th>
+          <th>Temps global</th>
+          <th>Cout MOD/h</th>
+          <th *ngIf="!isSociete()">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let prod of produits(); trackBy: trackById">
+          <td>{{ prod.nom }}</td>
+          <td>{{ prod.code }}</td>
+          <td>{{ typeClientName(prod.typeClientId) }}</td>
+          <td>{{ familleName(prod.familleProduitId) }}</td>
+          <td>{{ prod.poidsPrevu }}</td>
+          <td>{{ prod.tauxPoids }}</td>
+          <td>{{ prod.tpsUnitaire }}</td>
+          <td>{{ prod.tempsGlobal }}</td>
+          <td>{{ prod.coutMODParHeure }}</td>
+          <td *ngIf="!isSociete()">
+            <button class="btn-secondary" type="button" (click)="openEditProduit(prod)">Modifier</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

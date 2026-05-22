@@ -1,0 +1,14 @@
+<aside class="excel-sidebar">
+  <p class="sidebar-title">Navigation</p>
+  <ul class="sidebar-menu">
+    <li *ngFor="let item of menuItems">
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.path === '/societe/dashboard' }"
+      >
+        {{ item.label }}
+      </a>
+    </li>
+  </ul>
+</aside>

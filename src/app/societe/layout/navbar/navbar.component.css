@@ -1,0 +1,136 @@
+.excel-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1rem;
+  height: 48px;
+  background: #217346;
+  color: #fff;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.topbar-logo {
+  display: block;
+  width: 92px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.excel-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: #fff;
+  color: #217346;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.app-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.topbar-tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.tab {
+  padding: 0.4rem 0.85rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tab.active {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-label {
+  font-size: 0.85rem;
+}
+
+.btn-logout {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.excel-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f3f2f1;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.ribbon-btn {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d4d4d4;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #323130;
+}
+
+.ribbon-btn:hover {
+  background: #e2efda;
+  border-color: #a9d18e;
+}
+
+.ribbon-btn.accent {
+  background: #217346;
+  border-color: #185c37;
+  color: #fff;
+}
+
+.ribbon-btn.accent:hover {
+  background: #1a5c38;
+}
+
+.ribbon-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 0.35rem;
+  background: #d4d4d4;
+}
+
+@media (max-width: 768px) {
+  .topbar-tabs {
+    display: none;
+  }
+}

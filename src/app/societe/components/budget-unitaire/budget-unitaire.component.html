@@ -1,0 +1,177 @@
+<section class="budget-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Budget unitaire</p>
+      <h1 class="page-title">{{ societeName() }}</h1>
+      <p class="page-subtitle">Importez vos fichiers Excel pour chaque rapport financier.</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" routerLink="/societe/societe-rapports">← Retour</a>
+    </div>
+  </header>
+
+  <ng-container *ngIf="loading(); else tableLoaded">
+    <p class="loading-text">Chargement...</p>
+  </ng-container>
+
+  <ng-template #tableLoaded>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-type">Type</th>
+            <th class="col-annee">Année</th>
+            <th class="col-link">Rapport</th>
+            <th class="col-link">Rapport CR</th>
+            <th class="col-link">Tableau calculé</th>
+            <th class="col-link">Clés de répartition</th>
+            <th class="col-import">Import Excel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngIf="rapports().length === 0" class="empty-row">
+            <td colspan="7">Aucun rapport trouvé pour cette société.</td>
+          </tr>
+
+          <ng-container *ngFor="let r of rapports(); trackBy: trackByRapport">
+
+            <!-- ── Rapport row ──────────────────────────────────────────── -->
+            <tr class="rapport-row" [class.row-reel]="r.type === 0" [class.row-prev]="r.type === 1" [class.row-cr]="r.type === 2">
+              <td class="cell-text">{{ typeLabels[r.type] }}</td>
+              <td>{{ r.annee }}</td>
+
+              <td class="cell-action">
+                <button class="btn-link" type="button" (click)="goToRapport(r.id)">Ouvrir rapport</button>
+              </td>
+              <td class="cell-action">
+                <button class="btn-link" type="button" (click)="goToRapportCr(r.id)">Rapport CR</button>
+              </td>
+              <td class="cell-action">
+                <button class="btn-link" type="button" (click)="goToRapportCalcul(r.id)">Tableau calculé</button>
+              </td>
+              <td class="cell-action">
+                <button class="btn-link" type="button" (click)="goToCles()">Clés de répartition</button>
+              </td>
+
+              <!-- Import cell -->
+              <td class="cell-import">
+                <div class="import-controls" *ngIf="r.id as rid; else noRapportId">
+                  <input type="file" accept=".xls,.xlsx,.csv" (change)="onFileSelected(rid, $event)" />
+
+                  <button class="btn-primary" type="button"
+                    (click)="importExcel(rid)"
+                    [disabled]="!selectedFiles()[rid] || uploadState()[rid]?.uploading">
+                    {{ uploadState()[rid]?.uploading ? 'Import...' : 'Importer' }}
+                  </button>
+
+                  <span class="status success" *ngIf="uploadState()[rid]?.message">
+                    {{ uploadState()[rid]?.message }}
+                  </span>
+                  <span class="status error" *ngIf="uploadState()[rid]?.error">
+                    {{ uploadState()[rid]?.error }}
+                  </span>
+
+                  <!-- Show/hide comparison button -->
+                  <button *ngIf="countTotal(rid) > 0"
+                    class="btn-action btn-sm mt-1" type="button"
+                    (click)="toggleComparison(rid)">
+                    {{ showComparison()[rid] ? 'Masquer' : 'Voir comparaison' }}
+                    (✅ {{ countMatched(rid) }} / ❌ {{ countChanged(rid) + countNoVariable(rid) }})
+                  </button>
+
+                  <!-- Diagnostics (ExcelVariables) -->
+                  <div class="diag" *ngIf="diagnostics()[rid] as d">
+                    <div class="diag-row">
+                      <span class="muted">Correspondances : {{ d.matched.length }} / {{ d.lineLabels.length }}</span>
+                      <span class="muted">Libellés Excel lus : {{ d.excelLabels.length }}</span>
+                    </div>
+                    <div class="diag-row" *ngIf="d.unmatchedExcel.length">
+                      <span class="muted">Excel non trouvés :</span>
+                      <span class="pill" *ngFor="let l of d.unmatchedExcel | slice:0:4">{{ l }}</span>
+                      <span class="pill" *ngIf="d.unmatchedExcel.length > 4">+{{ d.unmatchedExcel.length - 4 }}</span>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #noRapportId>
+                  <span class="muted">Rapport sans identifiant</span>
+                </ng-template>
+              </td>
+
+              
+            </tr>
+
+            <!-- comparison alert rows removed (now displayed in modal) -->
+
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Modal de comparaison (overlay) -->
+    <ng-container *ngFor="let r of rapports()">
+      <div class="modal-backdrop" *ngIf="r.id && showComparison()[r.id]" (click)="closeComparison(r.id!)"></div>
+
+      <div class="comparison-modal" *ngIf="r.id && showComparison()[r.id]">
+        <div class="modal-header">
+          <div class="alert-title">
+            <i class="feather-bar-chart-2 ui-icon"></i>
+            <strong>Comparaison — Lignes calculées</strong>
+            <span class="badge-rapport">Rapport #{{ r.id }} &bull; {{ r.annee }}</span>
+          </div>
+          <div class="alert-meta">
+            <span class="chip chip-ok">✅ {{ countMatched(r.id) }} identique(s)</span>
+            <span class="chip chip-changed" *ngIf="countChanged(r.id) > 0">🔄 {{ countChanged(r.id) }} modifié(s)</span>
+            <span class="chip chip-miss" *ngIf="countNoVariable(r.id) > 0">❌ {{ countNoVariable(r.id) }} sans variable</span>
+          </div>
+          <button class="modal-close" type="button" (click)="closeComparison(r.id!)">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert-body">
+            <table class="cmp-table">
+              <thead>
+                <tr>
+                  <th>Ligne calculée</th>
+                  <th class="num">Ancien résultat</th>
+                  <th class="num">Valeur Excel</th>
+                  <th class="ctr">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of comparisonResults()[r.id]; trackBy: trackByRow"
+                    [class.row-ok]="row.matched"
+                    [class.row-changed]="!row.matched && row.excelValue !== null"
+                    [class.row-miss]="row.excelValue === null">
+
+                  <td class="row-nom">{{ row.nom }}</td>
+                  <td class="num muted-val">{{ formatNumber(row.oldResultat) }}</td>
+                  <td class="num"
+                    [class.val-updated]="!row.matched && row.excelValue !== null"
+                    [class.val-same]="row.matched"
+                    [class.missing]="row.excelValue === null">
+                    {{ row.excelValue !== null ? formatNumber(row.newResultat) : '—' }}
+                  </td>
+                  <td class="ctr">
+                    <span *ngIf="row.matched" title="Valeur Excel identique à l'ancien résultat">✅</span>
+                    <span *ngIf="!row.matched && row.excelValue !== null" title="Valeur Excel différente — résultat mis à jour ">🔄</span>
+                    <span *ngIf="row.excelValue === null" title="Aucune variable Excel configurée pour cette ligne">❌</span>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="cmp-footer">
+                  <td colspan="2">Total : <strong>{{ countTotal(r.id) }}</strong> ligne(s) calculée(s)</td>
+                  <td colspan="2" class="num">
+                    <strong class="ok-txt">✅ {{ countMatched(r.id) }}</strong> identique(s) &nbsp;
+                    <strong class="changed-txt">🔄 {{ countChanged(r.id) }}</strong> modifié(s) &nbsp;
+                    <strong class="miss-txt">❌ {{ countNoVariable(r.id) }}</strong> sans variable
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </ng-template>
+</section>

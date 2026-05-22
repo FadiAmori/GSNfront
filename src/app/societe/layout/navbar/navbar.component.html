@@ -1,0 +1,33 @@
+<header class="excel-topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="/assets/images/auth/logo-gsn-2.png" alt="Logo PFE Admin" />
+
+  </div>
+  <nav class="topbar-tabs" aria-label="Menu principal">
+    <button
+      type="button"
+      class="tab"
+      *ngFor="let item of menuItems"
+    
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.path === '/societe/dashboard' }"
+      >
+        {{ item.label }}
+    
+    
+      
+    </button>
+  </nav>
+
+  <div class="topbar-right">
+    <span class="user-label">{{ adminName }}</span>
+    <button type="button" class="btn-logout" (click)="onLogout()">Déconnexion</button>
+  </div>
+</header>
+
+<div class="excel-ribbon">
+  <button type="button" class="ribbon-btn">Exporter</button>
+  <span class="ribbon-sep"></span>
+  <button type="button" class="ribbon-btn accent">Actualiser</button>
+</div>

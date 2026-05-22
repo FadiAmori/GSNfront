@@ -1,0 +1,132 @@
+<section class="societes-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Sociétés</p>
+      <h1 class="page-title">Liste des sociétés</h1>
+      <p class="page-subtitle">Gérez vos sociétés — ajoutez, modifiez ou consultez les détails.</p>
+    </div>
+    <button type="button" class="btn-primary" (click)="openCreate()">+ Ajouter</button>
+  </header>
+
+  <p *ngIf="errorMessage" class="alert-error" role="alert">{{ errorMessage }}</p>
+  <p *ngIf="loading" class="loading-text">Chargement…</p>
+
+  <div *ngIf="!loading" class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-nom">Nom</th>
+          <th class="col-tel">Téléphone</th>
+          <th class="col-statut">Statut</th>
+          <th class="col-action">Voir</th>
+          <th class="col-action">Utilisateurs</th>
+          <th class="col-action">Rapports</th>
+          <th class="col-action">Dashboard</th>
+          <th class="col-action">Modifier</th>
+          <th class="col-action">Supprimer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="societes.length === 0">
+          <td colspan="9" class="empty-row">Aucune société pour le moment.</td>
+        </tr>
+        <tr *ngFor="let item of societes">
+          <td class="cell-name">{{ item.nom }}</td>
+          <td>{{ item.telephone || '—' }}</td>
+          <td class="cell-statut">
+            <span class="badge" [class.badge-active]="item.active">
+              {{ item.active ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action" (click)="openDetails(item)">Voir</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action" (click)="viewUsers(item)">Ouvrir</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action" (click)="viewRapports(item)">Ouvrir</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action" (click)="viewDashboard(item)">Ouvrir</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-edit" (click)="openEdit(item)">Modifier</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-danger" (click)="remove(item)">Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Modal détails (lecture seule) -->
+<div *ngIf="showDetailModal && detailSociete" class="modal-overlay" (click)="closeDetailModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ detailSociete.nom }}</h2>
+      <button type="button" class="btn-close" (click)="closeDetailModal()">×</button>
+    </header>
+    <dl class="detail-list">
+      <dt>Adresse</dt><dd>{{ detailSociete.adresse || '—' }}</dd>
+      <dt>Ville</dt><dd>{{ detailSociete.ville || '—' }}</dd>
+      <dt>Pays</dt><dd>{{ detailSociete.pays || '—' }}</dd>
+      <dt>Téléphone</dt><dd>{{ detailSociete.telephone || '—' }}</dd>
+      <dt>Email</dt><dd>{{ detailSociete.email || '—' }}</dd>
+      <dt>Statut</dt>
+      <dd>{{ detailSociete.active ? 'Active' : 'Inactive' }}</dd>
+    </dl>
+    <footer class="modal-footer">
+      <button type="button" class="btn-ghost" (click)="closeDetailModal()">Fermer</button>
+      <button type="button" class="btn-primary" (click)="closeDetailModal(); openEdit(detailSociete)">Modifier</button>
+    </footer>
+  </div>
+</div>
+
+<!-- Modal formulaire (créer / modifier) -->
+<div *ngIf="showFormModal" class="modal-overlay" (click)="closeFormModal()">
+  <div class="modal-box modal-box--form" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ modalTitle }}</h2>
+      <button type="button" class="btn-close" (click)="closeFormModal()">×</button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+      <label>
+        Nom <span class="required">*</span>
+        <input type="text" formControlName="nom" />
+      </label>
+      <p *ngIf="isInvalid('nom')" class="field-error">Le nom est obligatoire.</p>
+
+      <label>Adresse <input type="text" formControlName="adresse" /></label>
+      <label>Ville <input type="text" formControlName="ville" /></label>
+      <label>Pays <input type="text" formControlName="pays" /></label>
+      <label>Téléphone <input type="text" formControlName="telephone" /></label>
+
+      <label>
+        Email
+        <input type="email" formControlName="email" />
+      </label>
+      <p *ngIf="isInvalid('email')" class="field-error">Email invalide.</p>
+
+      <label>
+        Mot de passe
+        <span *ngIf="!editing" class="required">*</span>
+        <input type="password" formControlName="password" [placeholder]="editing ? 'Laisser vide si inchangé' : ''" />
+      </label>
+      <p *ngIf="isInvalid('password')" class="field-error">Mot de passe requis (4 caractères min.).</p>
+
+      <label class="checkbox-line">
+        <input type="checkbox" formControlName="active" />
+        Société active
+      </label>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="closeFormModal()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,46 @@
+:host {
+  --excel-green: #217346;
+  --excel-green-dark: #185c37;
+  --excel-green-light: #e2efda;
+  --excel-border: #d4d4d4;
+  --excel-text: #323130;
+  --excel-white: #ffffff;
+  display: block;
+}
+
+.excel-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--excel-white);
+  color: var(--excel-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.excel-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.excel-main {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  overflow: auto;
+  background: var(--excel-white);
+}
+
+.excel-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  height: 24px;
+  background: var(--excel-green);
+  color: var(--excel-white);
+  font-size: 0.75rem;
+}
+
+.status-sep {
+  opacity: 0.6;
+}

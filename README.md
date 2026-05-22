@@ -14,6 +14,11 @@ Run `ng generate component component-name` to generate a new component. You can 
 
 Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
 
+## Vercel deployment
+
+Set `API_URL` in Vercel to the production backend base URL, then deploy with the build command from `vercel.json`.
+The production output is written to `dist/front`, and SPA route rewrites are handled automatically.
+
 ## Running unit tests
 
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).

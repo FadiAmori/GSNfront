@@ -1,0 +1,49 @@
+<main class="login-page">
+  <section class="login-card" aria-labelledby="login-title">
+    <h1 id="login-title" class="login-title">Connexion</h1>
+
+    <form (ngSubmit)="onSubmit()" class="login-form" autocomplete="on">
+      <label class="field">
+        <span class="field-label">Entrez votre email</span>
+        <input
+          type="email"
+          name="email"
+          [(ngModel)]="credentials.Email"
+          placeholder="exemple@domaine.com"
+          required
+        />
+      </label>
+
+      <label class="field">
+        <span class="field-label">Entrez votre mot de passe</span>
+        <input
+          type="password"
+          name="password"
+          [(ngModel)]="credentials.Password"
+          placeholder="••••••••"
+          required
+        />
+      </label>
+
+      <div class="login-options">
+        <label class="remember">
+          <input
+            type="checkbox"
+            [checked]="rememberMe"
+            (change)="rememberMe = $any($event.target).checked"
+            name="rememberMe"
+          />
+          <span>Se souvenir de moi</span>
+        </label>
+<a class="forgot-link" (click)="forgotPassword()">Mot de passe oublié ?</a>      </div>
+
+      <button type="submit" class="login-btn" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Connexion...' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <p *ngIf="loginError" class="login-error" role="alert">{{ loginError }}</p>
+
+ 
+  </section>
+</main>

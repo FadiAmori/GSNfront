@@ -1,0 +1,101 @@
+.rapport-page {
+  display: grid;
+  gap: 14px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #4b5563;
+}
+
+h1 {
+  margin: 4px 0;
+}
+
+.muted {
+  margin: 0;
+  color: #6b7280;
+}
+
+.actions-top {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.accounting-table-wrapper {
+  overflow: auto;
+}
+
+.accounting-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.accounting-table th,
+.accounting-table td {
+  border: 1px solid #dbe2ea;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.accounting-table thead th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.category-row td {
+  background: #eaf3ff;
+}
+
+.subcategory-row td {
+  background: #f7faff;
+}
+
+.calculated-line-row td {
+  background: #f9fff4;
+}
+
+.cell-main {
+  font-weight: 600;
+}
+
+.cell-sub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.total {
+  font-weight: 700;
+}
+
+.loading-state,
+.empty-state {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 6px;
+}

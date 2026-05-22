@@ -1,0 +1,206 @@
+<section class="nxl-content">
+    <div class="page-header">
+      <div class="page-header-left d-flex align-items-center">
+        <div class="page-header-title">
+          <h5 class="m-b-10">Dashboard société</h5>
+          <p class="text-muted mb-0">Vue synthétique pour {{ societeName() }}</p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="main-content" *ngIf="!loading(); else loadingTpl">
+      <section class="metrics-row">
+        <article
+          class="metric-card"
+          *ngFor="let m of visibleMetrics()"
+          [style.background]="m.customColor || null"
+        >
+          <div class="metric-card__title">{{ m.label }}</div>
+          <div class="metric-card__value" [ngClass]="m.colorClass">{{ m.value | number:'1.0-0' }}</div>
+          <div class="metric-card__description">{{ m.description }}</div>
+        </article>
+      </section>
+
+      <section class="charts-section">
+        <div class="charts-section__header">
+          <h6 class="charts-section__title">Graphiques statistiques</h6>
+        </div>
+
+
+
+        <div class="charts-grid charts-grid--stats" *ngIf="customCharts().length; else noChartsTpl">
+          <article class="chart-card" *ngFor="let c of customCharts()">
+            <header class="chart-card__header">
+              <h6 class="chart-card__title">
+                {{ c.dimension === 'categorie' ? 'Catégories' : c.dimension === 'sousCategorie' ? 'Sous-catégories' : 'Lignes' }}
+                <span class="chart-card__subtitle">· {{ getFilterLabel(c) }} · {{ getRapportLabel(c.rapportId) }}</span>
+              </h6>
+              <div class="d-flex align-items-center gap-2">
+                <select
+                  class="form-select form-select-sm d-inline w-auto"
+                  (change)="updateChartRapport(c.id, $any($event.target).value)">
+                  <option value="">Tous les rapports</option>
+                  <option *ngFor="let r of rapportsForSociete()" [value]="r.id" [selected]="c.rapportId === r.id">Rapport {{ r.annee }}</option>
+                </select>
+                <button
+                  *ngIf="!readonlyMode()"
+                  type="button"
+                  class="chart-card__remove"
+                  (click)="removeChart(c.id)"
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+
+            <ng-container [ngSwitch]="c.shape">
+              <ng-container *ngSwitchCase="'circle'">
+                <div class="chart-card__body chart-card__body--circle" *ngIf="getChartSlices(c).length; else chartEmpty">
+                  <div class="chart-circle" [style.background]="buildCircleBackground(c)">
+                    <div class="chart-circle__inner">
+                      <span class="chart-circle__total">{{ getChartTotal(c) | number:'1.0-0' }}</span>
+                    </div>
+                  </div>
+                  <ul class="chart-legend">
+                    <li class="chart-legend__item" *ngFor="let s of getChartSlices(c)">
+                      <span class="chart-legend__color" [style.background]="s.color"></span>
+                      <span class="chart-legend__label">{{ s.label }}</span>
+                      <span class="chart-legend__value">{{ s.value | number:'1.0-0' }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'bar'">
+                <div class="chart-card__body chart-card__body--bar" *ngIf="getChartSlices(c).length; else chartEmpty">
+                  <div class="chart-bars chart-bars--vertical">
+                    <div class="chart-bar" *ngFor="let s of getChartSlices(c)">
+                      <div class="chart-bar__value">{{ s.value | number:'1.0-0' }}</div>
+                      <div class="chart-bar__track chart-bar__track--vertical">
+                        <div
+                          class="chart-bar__fill"
+                          [style.height.%]="s.percentage"
+                          [style.background]="s.color"
+                        ></div>
+                      </div>
+                      <div class="chart-bar__label" [title]="s.label">{{ s.label }}</div>
+                      <div class="chart-bar__pct">{{ s.percentage | number:'1.0-1' }}%</div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+            <ng-template #chartEmpty>
+              <div class="chart-card__body chart-card__body--empty">
+                Aucune donnée pour ce graphique.
+              </div>
+            </ng-template>
+          </article>
+        </div>
+
+        <ng-template #noChartsTpl>
+          <p class="text-muted small">Aucun graphique. Configurez un graphique puis cliquez sur "Ajouter le graphique".</p>
+        </ng-template>
+      </section>
+
+      
+    </div>
+
+        <!-- Courbe de comparaison par mois (Chart.js) - globale -->
+        <div class="card stretch mt-3">
+          <div class="card-body">
+            <h6 class="charts-section__title mb-2">Comparaison par mois (courbe)</h6>
+            <p class="text-muted small mb-3">
+              Sélectionnez deux rapports financiers à comparer. La courbe affiche la répartition mensuelle des montants selon la saisonnalité CA.
+            </p>
+
+            <div class="row g-2 align-items-end mb-3">
+              <div class="col-md-3">
+                <label class="form-label">Rapport 1</label>
+                <select class="form-select" (change)="setLineChartRapport1Id($any($event.target).value)">
+                  <option value="">Aucun</option>
+                  <option *ngFor="let r of rapportsForSociete()" [value]="r.id">Rapport {{ r.annee }}</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Rapport 2</label>
+                <select class="form-select" (change)="setLineChartRapport2Id($any($event.target).value)">
+                  <option value="">Aucun</option>
+                  <option *ngFor="let r of rapportsForSociete()" [value]="r.id">Rapport {{ r.annee }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="line-chart-wrapper" *ngIf="lineChartSeries().length; else noLineChartTpl">
+              <app-line-chart
+                [labels]="lineChartLabels()"
+                [series]="lineChartSeries()"
+              ></app-line-chart>
+            </div>
+
+            <ng-template #noLineChartTpl>
+              <p class="text-muted small mb-0">
+                Sélectionnez au moins un rapport pour afficher la courbe de comparaison mensuelle.
+              </p>
+            </ng-template>
+          </div>
+        </div>
+
+
+
+        <div class="charts-grid charts-grid--lines mt-3" *ngIf="courbes().length">
+          <article class="chart-card" *ngFor="let c of courbes()">
+            <header class="chart-card__header">
+              <h6 class="chart-card__title">
+                Courbe · {{ getCourbeLabel(c) }} ·
+                <span class="chart-card__subtitle">
+                  {{ c.rapport1Id ? getRapportLabel(c.rapport1Id) : '' }}
+                  <span *ngIf="c.rapport1Id && c.rapport2Id">vs</span>
+                  {{ c.rapport2Id ? getRapportLabel(c.rapport2Id) : '' }}
+                </span>
+              </h6>
+              <div class="d-flex align-items-center">
+                <div class="me-2">
+                  <select class="form-select form-select-sm d-inline w-auto" (change)="updateCourbeRapport1(c.id, $any($event.target).value)">
+                    <option value="">Rapport 1</option>
+                    <option *ngFor="let r of rapportsForSociete()" [value]="r.id" [selected]="c.rapport1Id === r.id">Rapport {{ r.annee }}</option>
+                  </select>
+                </div>
+                <div class="me-2">
+                  <select class="form-select form-select-sm d-inline w-auto" (change)="updateCourbeRapport2(c.id, $any($event.target).value)">
+                    <option value="">Rapport 2</option>
+                    <option *ngFor="let r of rapportsForSociete()" [value]="r.id" [selected]="c.rapport2Id === r.id">Rapport {{ r.annee }}</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm me-2"
+                  (click)="saveCourbe(c.id)"
+                >
+                  Mettre à jour
+                </button>
+                <button
+                  *ngIf="!readonlyMode()"
+                  type="button"
+                  class="chart-card__remove"
+                  (click)="removeCourbe(c.id)"
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+            <div class="chart-card__body">
+              <div class="line-chart-wrapper">
+                <app-line-chart
+                  [labels]="months"
+                  [series]="getCourbeSeries(c)"
+                ></app-line-chart>
+              </div>
+            </div>
+          </article>
+        </div>
+  <ng-template #loadingTpl>
+    <div class="loading">Chargement du dashboard...</div>
+  </ng-template>
+</section>

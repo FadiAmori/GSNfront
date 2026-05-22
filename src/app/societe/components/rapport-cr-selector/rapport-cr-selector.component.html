@@ -1,0 +1,19 @@
+<section class="selector-page">
+  <h2>Rapport CR</h2>
+  <p>Choisissez un rapport (prévisionnel de l'annee en cours par defaut), puis cliquez sur Ouvrir.</p>
+
+  <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
+  <p *ngIf="loading">Chargement...</p>
+
+  <div *ngIf="!loading" class="selector-box">
+    <label for="rapport-cr-select">Rapport</label>
+    <select id="rapport-cr-select" [(ngModel)]="selectedRapportId">
+      <option [ngValue]="null">Choisir un rapport</option>
+      <option *ngFor="let r of rapports" [ngValue]="r.id">
+        {{ getTypeLabel(r.type) }} - {{ r.annee }}
+      </option>
+    </select>
+
+    <button type="button" (click)="openCr()" [disabled]="!selectedRapportId">Ouvrir CR</button>
+  </div>
+</section>

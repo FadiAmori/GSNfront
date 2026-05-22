@@ -1,0 +1,153 @@
+<section class="import-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Rapport financier</p>
+      <h1>Import Excel</h1>
+      <p class="muted">Associez les lignes du rapport aux lignes de votre fichier Excel.</p>
+    </div>
+    <button type="button" class="btn-back" (click)="backToTableau()">← Retour au tableau</button>
+  </header>
+
+  <p *ngIf="error()" class="alert-error">{{ error() }}</p>
+  <p *ngIf="message()" class="alert-success">{{ message() }}</p>
+  <p *ngIf="loading()" class="loading-text">Chargement…</p>
+
+  <div *ngIf="!loading()" class="layout">
+    <section class="panel">
+      <h2>Fichier Excel</h2>
+      <label class="file-label">
+        Choisir un fichier (.xlsx, .xls, .csv)
+        <input type="file" (change)="onFileChange($event)" accept=".xlsx,.xls,.csv" />
+      </label>
+      <label *ngIf="sheetNames().length > 1" class="sheet-select">
+        Onglet
+        <select (change)="onSheetChange($event)">
+          <option *ngFor="let name of sheetNames()" [value]="name" [selected]="name === activeSheet()">{{ name }}</option>
+        </select>
+      </label>
+
+      <div *ngIf="hasExcel()" class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th *ngFor="let h of headers()">{{ h }}</th>
+              <th>Valeur</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of data(); let i = index">
+              <td>{{ i + 1 }}</td>
+              <td *ngFor="let h of headers()">{{ row[h] }}</td>
+              <td>{{ excelRowValueAt(i) }}</td>
+              <td>
+                <button type="button" class="btn-small" (click)="startCreateFromRow(i)">Créer ligne</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p *ngIf="!hasExcel()" class="muted">Aucun fichier chargé.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Associer les lignes financières</h2>
+
+      <table *ngIf="lignes().length; else noLignes" class="mapping-table">
+        <thead>
+          <tr>
+            <th>Ligne</th>
+            <th>Montant actuel</th>
+            <th>Ligne Excel</th>
+            <th>Valeur Excel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ligne of lignes()">
+            <td>{{ labelForLigne(ligne) }}</td>
+            <td>{{ ligne.montant | number:'1.0-2' }}</td>
+            <td>
+              <select [disabled]="!hasExcel()" (change)="onLigneExcelChange(ligne.id!, $event)">
+                <option value="">-- Aucune --</option>
+                <option *ngFor="let row of excelRows()" [value]="row.index">
+                  {{ row.index + 1 }} - {{ row.preview }}
+                </option>
+              </select>
+            </td>
+            <td>{{ excelValueForLigne(ligne.id!) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="applySelection()"
+        [disabled]="applying() || !hasExcel()"
+      >
+        {{ applying() ? 'Mise à jour…' : 'Appliquer les montants' }}
+      </button>
+
+      <h3 *ngIf="lignesCalculees().length">Lignes calculées</h3>
+      <table *ngIf="lignesCalculees().length" class="mapping-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Résultat</th>
+            <th>Ligne Excel</th>
+            <th>Valeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of lignesCalculees()">
+            <td>{{ c.nom }}</td>
+            <td>{{ c.resultat | number:'1.0-2' }}</td>
+            <td>
+              <select [disabled]="!hasExcel()" (change)="onCalculeeExcelChange(c.id!, $event)">
+                <option value="">-- Aucune --</option>
+                <option *ngFor="let row of excelRows()" [value]="row.index">
+                  {{ row.index + 1 }} - {{ row.preview }}
+                </option>
+              </select>
+            </td>
+            <td>{{ excelValueForCalculee(c.id!) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <section *ngIf="createRowIndex() != null" class="create-box">
+        <h3>Créer une ligne depuis Excel</h3>
+        <label>
+          Catégorie
+          <select [ngModel]="createCategoryId()" (ngModelChange)="createCategoryId.set($event)">
+            <option [ngValue]="null">-- Choisir --</option>
+            <option *ngFor="let cat of categories()" [ngValue]="cat.id">{{ cat.nom }}</option>
+          </select>
+        </label>
+        <label>
+          Sous-catégorie
+          <select [ngModel]="createSousCategorieId()" (ngModelChange)="createSousCategorieId.set($event)">
+            <option [ngValue]="null">-- Choisir --</option>
+            <option *ngFor="let sous of sousForCategory(createCategoryId())" [ngValue]="sous.id">{{ sous.nom }}</option>
+          </select>
+        </label>
+        <label>
+          Nom
+          <input type="text" [ngModel]="createName()" (ngModelChange)="createName.set($event)" />
+        </label>
+        <label>
+          Couleur
+          <input type="color" [ngModel]="createColor()" (ngModelChange)="createColor.set($event)" />
+        </label>
+        <button type="button" class="btn-primary" (click)="createLigneFromExcel()" [disabled]="creating()">
+          {{ creating() ? 'Création…' : 'Créer la ligne' }}
+        </button>
+      </section>
+    </section>
+  </div>
+
+  <ng-template #noLignes>
+    <p class="muted">Aucune ligne financière dans ce rapport.</p>
+  </ng-template>
+</section>

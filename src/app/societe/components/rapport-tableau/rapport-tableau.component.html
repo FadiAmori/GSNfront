@@ -1,0 +1,227 @@
+<section class="tableau-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Rapport financier</p>
+      <h1 class="page-title">{{ societeName() }}</h1>
+      <p class="page-subtitle">{{ rapportTitle || 'Vue tableau comptable' }}</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" [routerLink]="backLink">← Retour</a>
+      <a *ngIf="!isSociete()" class="btn-secondary" [routerLink]="importExcelLink">📥 Import Excel</a>
+      <button *ngIf="!isSociete()" type="button" class="btn-secondary" (click)="openCloneModal()">📋 Copier rapport</button>
+      <button *ngIf="!isSociete()" type="button" class="btn-primary" (click)="openCategoryForm()">+ Catégorie</button>
+      <button *ngIf="!isSociete()" type="button" class="btn-secondary" (click)="openLigneCalculeeModal()">+ Ligne calculée</button>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage()" class="alert-error">{{ errorMessage() }}</p>
+  <p *ngIf="loading()" class="loading-text">Chargement…</p>
+
+  <div *ngIf="!loading() && mixedItems().length === 0" class="empty-box">
+    <p>Aucune catégorie. Ajoutez une catégorie pour commencer.</p>
+  </div>
+
+  <div *ngIf="!loading() && mixedItems().length > 0" class="excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th class="col-drag" *ngIf="!isSociete()"></th>
+          <th>Catégorie</th>
+          <th>Sous-catégorie</th>
+          <th>Ligne</th>
+          <th class="col-montant">Montant</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody
+        cdkDropList
+        class="mixed-drop-body"
+        (cdkDropListDropped)="onMixedDrop($event)"
+      >
+        <ng-container *ngFor="let block of mixedItems(); trackBy: trackByMixedItem">
+          <tr
+            *ngIf="block.type === 'calculee'"
+            class="row-calculee mixed-item"
+            cdkDrag
+            [cdkDragDisabled]="isSociete()"
+            [style.background]="getTint(block.data)"
+          >
+            <td *ngIf="!isSociete()" class="col-drag"><span class="drag-handle" cdkDragHandle>⋮⋮</span></td>
+            <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(block.data)">
+              {{ block.data.nom }}
+            </td>
+            <td></td>
+            <td><em>Ligne calculée</em></td>
+            <td class="col-montant">{{ block.data.resultat | number:'1.0-2' }}</td>
+            <td class="col-actions">
+              <ng-container *ngIf="!isSociete(); else readonlyCalculeeActions">
+                <button type="button" class="btn-icon" title="Modifier" (click)="openEditLigneCalculeeModal(block.data)">✏️</button>
+                <button type="button" class="btn-icon btn-icon-danger" title="Supprimer" (click)="deleteLigneCalculee(block.data)">🗑️</button>
+              </ng-container>
+              <ng-template #readonlyCalculeeActions>—</ng-template>
+            </td>
+          </tr>
+
+          <ng-container *ngIf="block.type === 'categorie'">
+            <tr
+              class="row-categorie mixed-item"
+              cdkDrag
+              [cdkDragDisabled]="isSociete()"
+              [style.background]="getTint(block.data)"
+            >
+              <td *ngIf="!isSociete()" class="col-drag"><span class="drag-handle" cdkDragHandle>⋮⋮</span></td>
+              <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(block.data)">
+                {{ block.data.nom }}
+              </td>
+              <td></td>
+              <td></td>
+              <td class="col-montant"></td>
+              <td class="col-actions">
+                <ng-container *ngIf="!isSociete(); else readonlyCategoryActions">
+                  <button type="button" class="btn-icon" title="Modifier" (click)="editCategory(block.data)">✏️</button>
+                  <button type="button" class="btn-icon" title="Ajouter sous-catégorie" (click)="openSousForm(block.data.id!)">➕</button>
+                  <button type="button" class="btn-icon btn-icon-danger" title="Supprimer" (click)="deleteCategory(block.data)">🗑️</button>
+                </ng-container>
+                <ng-template #readonlyCategoryActions>—</ng-template>
+              </td>
+            </tr>
+
+            <ng-container *ngFor="let sous of sousFor(block.data.id)">
+              <tr class="row-sous" [style.background]="getTint(sous)">
+                <td class="col-drag"></td>
+                <td></td>
+                <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(sous)">{{ sous.nom }}</td>
+                <td></td>
+                <td class="col-montant"></td>
+                <td class="col-actions">
+                  <ng-container *ngIf="!isSociete(); else readonlySousActions">
+                    <button type="button" class="btn-icon" title="Modifier" (click)="openSousForm(block.data.id!, sous)">✏️</button>
+                    <button type="button" class="btn-icon" title="Ajouter ligne" (click)="openLigneForm(sous.id!)">➕</button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="Supprimer" (click)="deleteSousCategorie(sous)">🗑️</button>
+                  </ng-container>
+                  <ng-template #readonlySousActions>—</ng-template>
+                </td>
+              </tr>
+
+              <tr *ngFor="let ligne of lignesFor(sous.id)" class="row-ligne" [style.background]="getTint(ligne)">
+                <td class="col-drag"></td>
+                <td></td>
+                <td></td>
+                <td [style.border-left]="'3px solid ' + getColor(ligne)">{{ ligne.nom }}</td>
+                <td class="col-montant">{{ ligne.montant | number:'1.0-2' }}</td>
+                <td class="col-actions">
+                  <button type="button" class="btn-icon" title="Modifier montant" (click)="openLigneForm(sous.id!, ligne)">✏️</button>
+                  <button *ngIf="!isSociete()" type="button" class="btn-icon btn-icon-danger" title="Supprimer" (click)="deleteLigne(ligne)">🗑️</button>
+                </td>
+              </tr>
+            </ng-container>
+          </ng-container>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div *ngIf="showCategoryForm() && !isSociete()" class="modal-overlay" (click)="cancelCategory()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ editingCategory() ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}</h2>
+      <button type="button" class="btn-close" (click)="cancelCategory()">×</button>
+    </header>
+
+    <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="form-stack">
+      <label>Nom <input type="text" formControlName="nom" /></label>
+      <label class="label-color">Couleur <input type="color" formControlName="color" /></label>
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelCategory()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="sousFormFor() !== null && !isSociete()" class="modal-overlay" (click)="cancelSousCategorie()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ editingSous() ? 'Modifier la sous-catégorie' : 'Nouvelle sous-catégorie' }}</h2>
+      <button type="button" class="btn-close" (click)="cancelSousCategorie()">×</button>
+    </header>
+
+    <form [formGroup]="sousCategorieForm" (ngSubmit)="saveSousCategorie()" class="form-stack">
+      <label>Nom <input type="text" formControlName="nom" /></label>
+      <label class="label-color">Couleur <input type="color" formControlName="color" /></label>
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelSousCategorie()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="ligneFormFor() !== null" class="modal-overlay" (click)="cancelLigne()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ editingLigne() ? 'Modifier la ligne' : 'Nouvelle ligne' }}</h2>
+      <button type="button" class="btn-close" (click)="cancelLigne()">×</button>
+    </header>
+
+    <form [formGroup]="ligneForm" (ngSubmit)="saveLigne()" class="form-stack">
+      <label *ngIf="!isSociete()">Intitulé <input type="text" formControlName="nom" /></label>
+      <label *ngIf="!isSociete()">Unité <input type="text" formControlName="unite" /></label>
+      <label>Montant <input type="number" formControlName="montant" /></label>
+      <label *ngIf="!isSociete()" class="label-color">Couleur <input type="color" formControlName="color" /></label>
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelLigne()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="showLigneCalculeeModal() && !isSociete()" class="modal-overlay" (click)="closeLigneCalculeeModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ editingLigneCalculee() ? 'Modifier la ligne calculée' : 'Nouvelle ligne calculée' }}</h2>
+      <button type="button" class="btn-close" (click)="closeLigneCalculeeModal()">×</button>
+    </header>
+
+    <form class="form-stack" (ngSubmit)="editingLigneCalculee() ? updateLigneCalculeeModal() : createLigneCalculeeModal()">
+      <label>Nom <input type="text" [ngModel]="nomFormuleModal()" (ngModelChange)="nomFormuleModal.set($event)" name="nom" /></label>
+      <label>Expression (ex: 100 + 200) <input type="text" [ngModel]="buildExpression()" name="expression" disabled /></label>
+      <label class="label-color">Couleur <input type="color" [ngModel]="calculeeColorModal()" (ngModelChange)="calculeeColorModal.set($event)" name="color" /></label>
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="closeLigneCalculeeModal()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>
+<div *ngIf="cloneModalOpen() && !isSociete()" class="modal-overlay" (click)="cancelClone()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>Copier la structure d'un autre rapport</h2>
+      <button type="button" class="btn-close" (click)="cancelClone()">×</button>
+    </header>
+    <div class="form-stack">
+      <p *ngIf="cloneSources().length === 0" class="muted">Aucun autre rapport disponible.</p>
+      <label *ngIf="cloneSources().length > 0">
+        Rapport source
+        <select [ngModel]="selectedCloneSourceId()" (ngModelChange)="onSelectCloneSource($event)">
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let src of cloneSources()" [ngValue]="src.id">{{ src.label }}</option>
+        </select>
+      </label>
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelClone()">Annuler</button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="confirmClone()"
+          [disabled]="!selectedCloneSourceId() || loading()"
+        >
+          Copier
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

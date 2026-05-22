@@ -1,0 +1,89 @@
+<div class="admin-login">
+  <aside class="admin-login-brand" aria-hidden="true">
+    <div class="brand-grid"></div>
+    <div class="brand-glow"></div>
+    <div class="brand-content">
+      <span class="brand-badge">Administration</span>
+      <h2 class="brand-title">Panneau de contrôle</h2>
+      <p class="brand-text">
+        Gérez les sociétés, les comptes et les paramètres depuis un espace sécurisé réservé aux administrateurs.
+      </p>
+    </div>
+  </aside>
+
+  <main class="admin-login-main">
+    <section class="admin-login-card" aria-labelledby="admin-login-title">
+      <header class="card-header">
+        <div class="card-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+            <path d="M4 20v-1a6 6 0 0 1 12 0v1" />
+            <path d="M19 8v6M22 11h-6" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h1 id="admin-login-title">Connexion administrateur</h1>
+        <p>Accédez à votre espace avec vos identifiants professionnels.</p>
+      </header>
+
+      <form (ngSubmit)="onSubmit()" class="card-form" autocomplete="on">
+        <label class="input-group" for="admin-email">
+          <span>Adresse email</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path d="M4 6h16v12H4V6Z" />
+              <path d="m4 7 8 6 8-6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <input
+              id="admin-email"
+              type="email"
+              name="email"
+              [(ngModel)]="credentials.email"
+              placeholder="admin@votredomaine.com"
+              required
+            />
+          </div>
+        </label>
+
+        <label class="input-group" for="admin-password">
+          <span>Mot de passe</span>
+          <div class="input-wrap">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke-linecap="round" />
+            </svg>
+            <input
+              id="admin-password"
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="credentials.password"
+              placeholder="••••••••"
+              required
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            >
+              {{ showPassword ? 'Masquer' : 'Afficher' }}
+            </button>
+          </div>
+        </label>
+
+ 
+
+        <button type="submit" class="submit-btn" [disabled]="isSubmitting">
+          <span *ngIf="!isSubmitting">Se connecter</span>
+          <span *ngIf="isSubmitting" class="loading">Connexion en cours…</span>
+        </button>
+      </form>
+
+      <p *ngIf="loginError" class="form-error" role="alert">{{ loginError }}</p>
+
+      <footer class="card-footer">
+        <span>Vous êtes une société ?</span>
+        <a routerLink="/societe/login">Accéder à l'espace société</a>
+      </footer>
+    </section>
+  </main>
+</div>

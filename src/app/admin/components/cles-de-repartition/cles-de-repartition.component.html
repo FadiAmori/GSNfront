@@ -1,0 +1,86 @@
+<section class="tableau-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Parametrage</p>
+      <h1 class="page-title">{{ societeName() }}</h1>
+      <p class="page-subtitle">Tableau des cles de repartition</p>
+    </div>
+
+    <div class="header-actions">
+      <a class="btn-back" [routerLink]="backLink()">← Retour</a>
+      <button type="button" class="btn-primary" (click)="openCreate()">+ Nouvelle cle</button>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage()" class="alert-error">{{ errorMessage() }}</p>
+  <p *ngIf="loading()" class="loading-text">Chargement...</p>
+
+  <div *ngIf="!loading() && cles().length === 0" class="empty-box">
+    <p>Aucune cle. Clique sur Nouvelle cle pour commencer.</p>
+  </div>
+
+  <div *ngIf="!loading() && cles().length > 0" class="excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Mois</th>
+          <th>Saisonnalite CA</th>
+          <th>Saisonnalite Poids</th>
+          <th>Cles Cout Fixes</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of cles(); trackBy: trackByCle">
+          <td>{{ item.mois || '-' }}</td>
+          <td>{{ item.saisonaliteCA }}</td>
+          <td>{{ item.saisonalitePoids }}</td>
+          <td>{{ item.clesCoutFixes }}</td>
+          <td class="col-actions">
+            <button type="button" class="btn-icon" (click)="openEdit(item)" title="Modifier">✏️</button>
+            <button type="button" class="btn-icon btn-icon-danger" (click)="remove(item)" title="Supprimer">🗑️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div *ngIf="showModal()" class="modal-overlay" (click)="close()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>{{ modalTitle() }}</h2>
+      <button type="button" class="btn-close" (click)="close()">×</button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-stack">
+      <label>
+        Mois
+        <select formControlName="mois">
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let month of months" [ngValue]="month">{{ month }}</option>
+        </select>
+      </label>
+
+      <label>
+        Saisonnalite CA
+        <input type="number" formControlName="saisonaliteCA" />
+      </label>
+
+      <label>
+        Saisonnalite Poids
+        <input type="number" formControlName="saisonalitePoids" />
+      </label>
+
+      <label>
+        Cles Cout Fixes
+        <input type="number" formControlName="clesCoutFixes" />
+      </label>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="close()">Annuler</button>
+        <button type="submit" class="btn-primary">Enregistrer</button>
+      </footer>
+    </form>
+  </div>
+</div>

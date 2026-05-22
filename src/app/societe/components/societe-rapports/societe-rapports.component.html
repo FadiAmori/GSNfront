@@ -1,0 +1,87 @@
+<section class="rapports-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Rapports financiers</p>
+      <h1 class="page-title">{{ societeName }}</h1>
+      <p class="page-subtitle">Liste des rapports financiers de cette société.</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn-back" routerLink="/societe/dashboard">← Retour</a>
+      <button type="button" class="btn-primary" (click)="openCreate()">+ Ajouter</button>
+    </div>
+  </header>
+
+  <p *ngIf="errorMessage" class="alert-error" role="alert">{{ errorMessage }}</p>
+  <p *ngIf="loading" class="loading-text">Chargement…</p>
+
+  <div *ngIf="!loading" class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-type">Type</th>
+          <th class="col-annee">Année</th>
+          <th class="col-link">Rapport CR</th>
+          <th class="col-link">Rapport Tableau</th>
+          <th class="col-action">Modifier</th>
+          <th class="col-action">Supprimer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="rapports.length === 0">
+          <td colspan="6" class="empty-row">Aucun rapport pour cette société.</td>
+        </tr>
+        <tr *ngFor="let rapport of rapports">
+          <td class="cell-text">{{ getTypeLabel(rapport.type) }}</td>
+          <td>{{ rapport.annee }}</td>
+          <td class="cell-action">
+            <a
+              class="btn-link"
+              [routerLink]="['/societe/rapport-cr', rapport.id]"
+            >CR</a>
+          </td>
+          <td class="cell-action">
+            <a
+              class="btn-link"
+              [routerLink]="['/societe/rapport-tableau', rapport.id]"
+            >Tableau</a>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-edit" (click)="openEdit(rapport)">Modifier</button>
+          </td>
+          <td class="cell-action">
+            <button type="button" class="btn-action btn-danger" (click)="remove(rapport)">Supprimer</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="showFormModal" class="modal-overlay" (click)="closeFormModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2>{{ modalTitle }}</h2>
+        <button type="button" class="btn-close" (click)="closeFormModal()">×</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+        <label>
+          Type
+          <select formControlName="type">
+            <option *ngFor="let t of types" [ngValue]="t.value">{{ t.label }}</option>
+          </select>
+        </label>
+
+        <label>
+          Année <span class="required">*</span>
+          <input type="number" formControlName="annee" min="1900" />
+        </label>
+        <p *ngIf="isInvalid('annee')" class="field-error">Année obligatoire (min. 1900).</p>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn-ghost" (click)="closeFormModal()">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+</section>
