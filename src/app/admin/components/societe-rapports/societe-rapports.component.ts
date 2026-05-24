@@ -75,9 +75,9 @@ export class SocieteRapportsComponent implements OnInit {
     this.loading = true;
     this.errorMessage = null;
 
-    this.rapportService.getAll().subscribe({
+    this.rapportService.getBySocieteId(societeId).subscribe({
       next: (list) => {
-        this.rapports = (list ?? []).filter((r) => r.societeId === societeId);
+        this.rapports = list ?? [];
         this.loading = false;
       },
       error: () => {
@@ -116,10 +116,12 @@ export class SocieteRapportsComponent implements OnInit {
 
     const raw = this.form.getRawValue();
     const payload: RapportFinancier = {
-      societeId: this.societeId,
+      societeId: Number(this.societeId),
       type: raw.type as TypeRapport,
       annee: Number(raw.annee)
     };
+
+    console.log('Creating rapport for societeId=', this.societeId, 'payload=', payload);
 
     if (this.editing?.id) {
       this.rapportService.update(this.editing.id, { ...this.editing, ...payload }).subscribe({
@@ -132,13 +134,17 @@ export class SocieteRapportsComponent implements OnInit {
       return;
     }
 
-    this.rapportService.create(payload).subscribe({
+    this.rapportService.createForSociete(this.societeId!, payload).subscribe({
       next: (created) => {
+        console.log('CreateForSociete success', created);
         this.createCrIfNeeded(created);
         this.loadRapports(this.societeId!);
         this.closeFormModal();
       },
-      error: () => (this.errorMessage = 'Erreur lors de la création.')
+      error: (err) => {
+        console.error('CreateForSociete failed', err);
+        this.errorMessage = err?.error?.error ?? 'Erreur lors de la création.';
+      }
     });
   }
 

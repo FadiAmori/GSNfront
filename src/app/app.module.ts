@@ -21,6 +21,10 @@ import { SocieteUsersComponent as AdminSocieteUsersComponent } from './admin/com
 import { SocieteRapportsComponent as AdminSocieteRapportsComponent } from './admin/components/societe-rapports/societe-rapports.component';
 import { RapportTableauComponent } from './admin/components/rapport-tableau/rapport-tableau.component';
 import { RapportTableauImportComponent } from './admin/components/rapport-tableau-import/rapport-tableau-import.component';
+import { RapportCalculComponent as AdminRapportCalculComponent } from './admin/components/rapport-calcul/rapport-calcul.component';
+import { RapportCrComponent as AdminRapportCrComponent } from './admin/components/rapport-cr/rapport-cr.component';
+import { ClesDeRepartitionComponent as AdminClesDeRepartitionComponent } from './admin/components/cles-de-repartition/cles-de-repartition.component';
+import { RapportProduitsComponent as AdminRapportProduitsComponent } from './admin/components/rapport-produits/rapport-produits.component';
 
 // Societe imports
 import { SocieteLoginComponent } from './societe/components/login/login.component';
@@ -52,11 +56,24 @@ const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: AdminDashboardComponent },
+      { path: 'societes/:id/cles-de-repartition', component: AdminClesDeRepartitionComponent },
       { path: 'societes/:id/utilisateurs', component: AdminSocieteUsersComponent },
       { path: 'societes/:id/dashboard', component: AdminSocieteDashboardComponent },
       {
         path: 'societes/:id/rapports/:rapportId/tableau',
         component: RapportTableauComponent
+      },
+      {
+        path: 'societes/:id/rapports/:rapportId/calculs',
+        component: AdminRapportCalculComponent
+      },
+      {
+        path: 'societes/:id/rapports/:rapportId/rapport-cr',
+        component: AdminRapportCrComponent
+      },
+      {
+        path: 'societes/:id/rapports/:rapportId/rapport-produits',
+        component: AdminRapportProduitsComponent
       },
       {
         path: 'societes/:id/rapports/:rapportId/import-excel',

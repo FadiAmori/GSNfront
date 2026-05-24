@@ -97,6 +97,8 @@ export class RapportTableauComponent implements OnInit {
   readonly placementEditingLigneId     = signal<number | null>(null);
   readonly placementCategorieId        = signal<number | null>(null);
   readonly placementSousCategorieId    = signal<number | null>(null);
+  private draggingSousId: number | null = null;
+  private draggingLigneId: number | null = null;
 
   // ===== LISTE MIXTE drag & drop global =====
   // NOTE: mixedOrder is still used as a runtime signal, but is now derived from
@@ -799,18 +801,28 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
           .filter(l => l.rapportFinancierId === sourceId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
+        const sourceMixed = [
+          ...sourceCats
+            .filter(c => c.id != null)
+            .map(c => ({ type: 'categorie' as const, id: c.id as number, position: c.position ?? 0 })),
+          ...sourceCalculees
+            .filter(l => l.id != null)
+            .map(l => ({ type: 'calculee' as const, id: l.id as number, position: l.position ?? 0 }))
+        ].sort((a, b) => a.position - b.position);
+
+        const catNewPositions = new Map<number, number>();
+        const calcNewPositions = new Map<number, number>();
+        sourceMixed.forEach((item, index) => {
+          if (item.type === 'categorie') catNewPositions.set(item.id, index);
+          else calcNewPositions.set(item.id, index);
+        });
+
         // ─── FIX POSITION GLOBALE ─────────────────────────────────────────────
         // Reconstruire la liste mixte source (cats + calculées) triée par position,
         // puis assigner des index globaux séquentiels 0,1,2,3...
         // Cela garantit que dans le rapport cible, l'ordre est identique à la source.
         // Les positions source sont déjà globales et entrelacées (cat pos=1, calc pos=2, cat pos=3...)
         // Il suffit de les copier directement dans le rapport cible.
-        const calcNewPositions = new Map<number, number>(
-          sourceCalculees
-            .filter(lc => lc.id != null)
-            .map(lc => [lc.id!, lc.position ?? 0])
-        );
-
         // DEBUG - afficher l'ordre final qui sera créé dans le rapport cible
         const debugMixed = [
           ...sourceCats.map(c => ({ type: 'categorie', nom: c.nom, position_source: c.position })),
@@ -827,7 +839,7 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
         forkJoin(sourceCats.map(c => this.categorieService.create({
           nom: c.nom ?? '',
           rapportFinancierId: targetId,
-          position: c.position ?? 0,
+          position: c.id != null ? (catNewPositions.get(c.id) ?? c.position ?? 0) : (c.position ?? 0),
           color: this.resolveColor(c),
           couleur: this.resolveColor(c)
         }))).subscribe({
@@ -839,7 +851,10 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
             const catPositionUpdates = newCats
               .map((created, i) => {
                 if (!created?.id) return null;
-                const sourcePos = sourceCats[i]?.position ?? 0;
+                const sourceCat = sourceCats[i];
+                const sourcePos = sourceCat?.id != null
+                  ? (catNewPositions.get(sourceCat.id) ?? sourceCat.position ?? 0)
+                  : (sourceCat?.position ?? 0);
                 return this.categorieService.update(created.id, {
                   ...created,
                   id: created.id,
@@ -872,34 +887,77 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
                   const sousIdMap = new Map<number, number>();
                   sourceSous.forEach((sc, i) => { if (sc.id && newSous[i]?.id) sousIdMap.set(sc.id, newSous[i].id as number); });
 
-                  const sourceLignes = (lignes ?? [])
-                    .filter(l => sousIdMap.has(l.sousCategorieFinanciereId))
-                    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+                  const sousPositionUpdates = newSous
+                    .map((created, i) => {
+                      if (!created?.id) return null;
+                      const sourcePos = sourceSous[i]?.position ?? 0;
+                      return this.sousCategorieService.update(created.id, {
+                        ...created,
+                        id: created.id,
+                        position: sourcePos
+                      });
+                    })
+                    .filter((u): u is NonNullable<typeof u> => u != null);
 
-                  if (!sourceLignes.length) {
-                    this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, new Map(), calcNewPositions);
-                    return;
+                  const continueWithLignes = () => {
+                    const sourceLignes = (lignes ?? [])
+                      .filter(l => sousIdMap.has(l.sousCategorieFinanciereId))
+                      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+                    if (!sourceLignes.length) {
+                      this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, new Map(), calcNewPositions);
+                      return;
+                    }
+
+                    const targetYear = this.rapportAnnee();
+                    forkJoin(sourceLignes.map(l => this.ligneService.create({
+                      nom: l.nom ?? '',
+                      unite: l.unite ?? '',
+                      montant: 0,
+                      mois: l.mois,
+                      annee: targetYear ?? l.annee,
+                      sousCategorieFinanciereId: sousIdMap.get(l.sousCategorieFinanciereId) as number,
+                      position: l.position ?? 0,
+                      color: this.resolveColor(l),
+                      couleur: this.resolveColor(l)
+                    }))).subscribe({
+                      next: (createdLines) => {
+                        const lineIdMap = new Map<number, number>();
+                        sourceLignes.forEach((l, i) => { if (l.id && createdLines[i]?.id) lineIdMap.set(l.id, createdLines[i].id as number); });
+
+                        const linePositionUpdates = createdLines
+                          .map((created, i) => {
+                            if (!created?.id) return null;
+                            const sourcePos = sourceLignes[i]?.position ?? 0;
+                            return this.ligneService.update(created.id, {
+                              ...created,
+                              id: created.id,
+                              position: sourcePos
+                            });
+                          })
+                          .filter((u): u is NonNullable<typeof u> => u != null);
+
+                        if (linePositionUpdates.length) {
+                          forkJoin(linePositionUpdates).subscribe({
+                            next: () => this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, lineIdMap, calcNewPositions),
+                            error: () => this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, lineIdMap, calcNewPositions)
+                          });
+                        } else {
+                          this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, lineIdMap, calcNewPositions);
+                        }
+                      },
+                      error: () => this.finishClone(targetId)
+                    });
+                  };
+
+                  if (sousPositionUpdates.length) {
+                    forkJoin(sousPositionUpdates).subscribe({
+                      next: () => continueWithLignes(),
+                      error: () => continueWithLignes()
+                    });
+                  } else {
+                    continueWithLignes();
                   }
-
-                  const targetYear = this.rapportAnnee();
-                  forkJoin(sourceLignes.map(l => this.ligneService.create({
-                    nom: l.nom ?? '',
-                    unite: l.unite ?? '',
-                    montant: 0,
-                    mois: l.mois,
-                    annee: targetYear ?? l.annee,
-                    sousCategorieFinanciereId: sousIdMap.get(l.sousCategorieFinanciereId) as number,
-                    position: l.position ?? 0,
-                    color: this.resolveColor(l),
-                    couleur: this.resolveColor(l)
-                  }))).subscribe({
-                    next: (createdLines) => {
-                      const lineIdMap = new Map<number, number>();
-                      sourceLignes.forEach((l, i) => { if (l.id && createdLines[i]?.id) lineIdMap.set(l.id, createdLines[i].id as number); });
-                      this.cloneCalculatedLines(targetId, sourceCalculees, catIdMap, sousIdMap, lineIdMap, calcNewPositions);
-                    },
-                    error: () => this.finishClone(targetId)
-                  });
                 },
                 error: () => this.finishClone(targetId)
               });
@@ -952,7 +1010,7 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
       });
     };
 
-    const creates = sourceCalculees.map(lc => this.ligneCalculeeService.create({
+    const calcPayloads = sourceCalculees.map(lc => ({
       nom: lc.nom,
       expression: replaceLegacyLineIds(replaceCategorySousIds(lc.expression)),
       // Position globale pré-calculée dans confirmClone (interleaved avec les cats)
@@ -967,6 +1025,39 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
       couleur: this.resolveColor(lc)
     }));
 
+    const creates = calcPayloads.map(payload => this.ligneCalculeeService.create(payload));
+
+    const applyPositionUpdates = (updates: { id: number; position: number }[]) => {
+      if (!updates.length) {
+        this.finishClone(targetRapportId);
+        return;
+      }
+
+      const targetPositions = new Map<number, number>(updates.map(item => [item.id, item.position]));
+      this.ligneCalculeeService.getAll().subscribe({
+        next: (allCalculees) => {
+          const strictUpdates = (allCalculees ?? [])
+            .filter(item => item.id != null && targetPositions.has(item.id))
+            .map(item => this.ligneCalculeeService.update({
+              ...item,
+              id: item.id,
+              position: targetPositions.get(item.id as number)
+            }));
+
+          if (!strictUpdates.length) {
+            this.finishClone(targetRapportId);
+            return;
+          }
+
+          forkJoin(strictUpdates).subscribe({
+            next: () => this.finishClone(targetRapportId),
+            error: () => this.finishClone(targetRapportId)
+          });
+        },
+        error: () => this.finishClone(targetRapportId)
+      });
+    };
+
     forkJoin(creates).subscribe({
       next: (createdLines) => {
         const positionUpdates = createdLines
@@ -979,14 +1070,46 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
           })
           .filter((item): item is { id: number; position: number } => item != null);
 
-        if (!positionUpdates.length) {
-          this.finishClone(targetRapportId);
+        if (positionUpdates.length === sourceCalculees.length) {
+          applyPositionUpdates(positionUpdates);
           return;
         }
 
-        this.ligneCalculeeService.updateOrder(positionUpdates).subscribe({
-          next: () => this.finishClone(targetRapportId),
-          error: () => this.finishClone(targetRapportId)
+        const normalize = (value: string | null | undefined): string => (value ?? '').trim().toLowerCase();
+        this.ligneCalculeeService.getAll().subscribe({
+          next: (allCalculees) => {
+            const targetCandidates = (allCalculees ?? [])
+              .filter(item => item.rapportFinancierId === targetRapportId && item.id != null)
+              .sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+
+            const usedIds = new Set(positionUpdates.map(item => item.id));
+            const recoveredUpdates = calcPayloads
+              .map((payload, i) => {
+                if (createdLines[i]?.id != null) return null;
+
+                const source = sourceCalculees[i];
+                const correctPosition = source?.id != null
+                  ? (calcNewPositions.get(source.id) ?? source.position ?? 0)
+                  : (source?.position ?? 0);
+
+                const matchIndex = targetCandidates.findIndex(candidate => {
+                  if (candidate.id == null || usedIds.has(candidate.id)) return false;
+                  return normalize(candidate.nom) === normalize(payload.nom)
+                    && (candidate.expression ?? '').trim() === (payload.expression ?? '').trim();
+                });
+
+                if (matchIndex < 0) return null;
+
+                const [matched] = targetCandidates.splice(matchIndex, 1);
+                if (!matched?.id) return null;
+                usedIds.add(matched.id);
+                return { id: matched.id, position: correctPosition };
+              })
+              .filter((item): item is { id: number; position: number } => item != null);
+
+            applyPositionUpdates([...positionUpdates, ...recoveredUpdates]);
+          },
+          error: () => applyPositionUpdates(positionUpdates)
         });
       },
       error: () => this.finishClone(targetRapportId)
@@ -1580,6 +1703,76 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
     this.saveLignesOrder(reordered);
   }
 
+  onRowDragOver(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  onSousRowDragStart(sousId: number | undefined): void {
+    if (this.isSociete() || !sousId) return;
+    this.draggingSousId = sousId;
+  }
+
+  onSousRowDrop(targetSousId: number | undefined, categorieId: number | undefined): void {
+    if (this.isSociete() || !targetSousId || !categorieId || this.draggingSousId == null) return;
+
+    const sourceSousId = this.draggingSousId;
+    this.draggingSousId = null;
+    if (sourceSousId === targetSousId) return;
+
+    const items = [...this.sousFor(categorieId)];
+    const from = items.findIndex(item => item.id === sourceSousId);
+    const to = items.findIndex(item => item.id === targetSousId);
+    if (from === -1 || to === -1) return;
+
+    moveItemInArray(items, from, to);
+    const reordered = items.map((item, index) => ({ ...item, position: index }));
+    const reorderedById = new Map<number, SousCategorieFinanciere>(
+      reordered.flatMap(item => (item.id != null ? [[item.id, item as SousCategorieFinanciere]] : []))
+    );
+
+    this.sousCategories.update(all =>
+      all.map(sc => {
+        if (sc.id == null) return sc;
+        return reorderedById.get(sc.id) ?? sc;
+      })
+    );
+
+    this.saveSousCategoriesOrder(reordered);
+  }
+
+  onLigneRowDragStart(ligneId: number | undefined): void {
+    if (this.isSociete() || !ligneId) return;
+    this.draggingLigneId = ligneId;
+  }
+
+  onLigneRowDrop(targetLigneId: number | undefined, sousCategorieId: number | undefined): void {
+    if (this.isSociete() || !targetLigneId || !sousCategorieId || this.draggingLigneId == null) return;
+
+    const sourceLigneId = this.draggingLigneId;
+    this.draggingLigneId = null;
+    if (sourceLigneId === targetLigneId) return;
+
+    const items = [...this.lignesFor(sousCategorieId)];
+    const from = items.findIndex(item => item.id === sourceLigneId);
+    const to = items.findIndex(item => item.id === targetLigneId);
+    if (from === -1 || to === -1) return;
+
+    moveItemInArray(items, from, to);
+    const reordered = items.map((item, index) => ({ ...item, position: index }));
+    const reorderedById = new Map<number, LigneFinanciere>(
+      reordered.flatMap(item => (item.id != null ? [[item.id, item as LigneFinanciere]] : []))
+    );
+
+    this.lignes.update(all =>
+      all.map(ligne => {
+        if (ligne.id == null) return ligne;
+        return reorderedById.get(ligne.id) ?? ligne;
+      })
+    );
+
+    this.saveLignesOrder(reordered);
+  }
+
   private saveCategoriesOrder(items: CategorieFinanciere[]): void {
     const updates = items
       .filter((item): item is CategorieFinanciere & { id: number } => item.id != null)
@@ -1617,7 +1810,23 @@ private loadCloneSources(societeId: number, currentRapportId: number): void {
   }
 
   private saveLignesCalculeesOrder(items: LigneCalculee[]): void {
-    this.ligneCalculeeService.updateOrder(items.map((item) => ({ id: item.id, position: item.position }))).subscribe({
+    const updates = items
+      .filter((item): item is LigneCalculee & { id: number } => item.id != null)
+      .map(item => this.ligneCalculeeService.update({
+        ...item,
+        id: item.id,
+        nom: item.nom ?? '',
+        expression: item.expression ?? '',
+        resultat: item.resultat ?? 0,
+        categorieFinanciereId: item.categorieFinanciereId ?? null,
+        sousCategorieFinanciereId: item.sousCategorieFinanciereId ?? null,
+        color: this.resolveColor(item),
+        couleur: this.resolveColor(item)
+      }));
+
+    if (!updates.length) return;
+
+    forkJoin(updates).subscribe({
       error: (err) => alert('Erreur lors de la sauvegarde de l\'ordre: ' + (err.error?.error || ''))
     });
   }

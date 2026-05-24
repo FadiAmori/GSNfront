@@ -5,6 +5,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { SocieteService } from '../../services/societe.service';
+import { RapportFinancierService } from '../../services/rapport-financier.service';
+import { TypeRapport } from '../../services/rapport-financier.model';
 import { CategorieCR, CategorieCrService } from '../../services/categorie-cr.service';
 import { SousCategorieCR, SousCategorieCrService } from '../../services/sous-categorie-cr.service';
 import { LigneFinanciere } from '../../services/ligne-financiere.model';
@@ -32,6 +34,7 @@ export class RapportCrComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly societeService = inject(SocieteService);
+  private readonly rapportService = inject(RapportFinancierService);
   private readonly categorieCrService = inject(CategorieCrService);
   private readonly sousCategorieCrService = inject(SousCategorieCrService);
   private readonly ligneService = inject(LigneFinanciereService);
@@ -67,6 +70,16 @@ export class RapportCrComponent implements OnInit {
   readonly backLink = computed(() => ['/admin/societes', String(this.societeId() ?? ''), 'rapports']);
   readonly produitsLink = computed(() => ['/admin/societes', this.societeId() ?? '', 'rapports', this.rapportId() ?? '', 'rapport-produits']);
   readonly isSociete = computed(() => sessionStorage.getItem('userType') === 'societe');
+  readonly cloneCrModalOpen = signal(false);
+  readonly cloneCrLoading = signal(false);
+  readonly cloneCrSources = signal<{ id: number; label: string }[]>([]);
+  readonly selectedCloneCrSourceId = signal<number | null>(null);
+
+  readonly typeLabels: Record<TypeRapport, string> = {
+    0: 'REEL',
+    1: 'PREVISIONNEL',
+    2: 'CR'
+  };
 
   readonly sousByCategory = computed(() => {
     const map = new Map<number, SousCategorieCR[]>();
@@ -138,6 +151,7 @@ export class RapportCrComponent implements OnInit {
     this.rapportId.set(currentRapportId);
     this.loadSociete(currentSocieteId);
     this.loadData(currentRapportId);
+    this.loadCloneCrSources(currentSocieteId, currentRapportId);
   }
 
   private loadSociete(id: number): void {
@@ -292,5 +306,187 @@ export class RapportCrComponent implements OnInit {
 
   trackByColumn(index: number, item: { sousId: number; line?: LigneFinanciereCr }): string | number {
     return item.line?.id ?? `sous-${item.sousId}-${index}`;
+  }
+
+  private normalizeLabel(value: string | null | undefined): string {
+    return (value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private loadCloneCrSources(societeId: number, currentRapportId: number): void {
+    this.cloneCrLoading.set(true);
+    this.rapportService.getAll().subscribe({
+      next: (all) => {
+        const options = (all ?? [])
+          .filter(r => r.societeId === 1 && r.id && r.id !== currentRapportId)
+          .map(r => ({
+            id: r.id as number,
+            label: `${this.typeLabels[r.type as TypeRapport]} · ${r.annee}`
+          }));
+        this.cloneCrSources.set(options);
+        this.cloneCrLoading.set(false);
+      },
+      error: () => {
+        this.cloneCrSources.set([]);
+        this.cloneCrLoading.set(false);
+      }
+    });
+  }
+
+  openCloneCrModal(): void {
+    if (this.isSociete()) return;
+    const societeId = this.societeId();
+    const rapportId = this.rapportId();
+    if (!this.cloneCrSources().length && societeId && rapportId) {
+      this.loadCloneCrSources(societeId, rapportId);
+    }
+    this.cloneCrModalOpen.set(true);
+  }
+
+  cancelCloneCr(): void {
+    this.cloneCrModalOpen.set(false);
+    this.selectedCloneCrSourceId.set(null);
+  }
+
+  onSelectCloneCrSource(id: number | null): void {
+    this.selectedCloneCrSourceId.set(id);
+  }
+
+  confirmCloneCr(): void {
+    const targetId = this.rapportId();
+    const sourceId = this.selectedCloneCrSourceId();
+    if (!targetId || !sourceId) return;
+
+    this.loading.set(true);
+
+    forkJoin({
+      catsCr: this.categorieCrService.getAll(),
+      sousCr: this.sousCategorieCrService.getAll(),
+      lignes: this.ligneService.getAll(),
+      catsFin: this.categorieService.getAll(),
+      sousFin: this.sousCategorieService.getAll()
+    }).subscribe({
+      next: ({ catsCr, sousCr, lignes, catsFin, sousFin }) => {
+        const sourceCats = (catsCr ?? []).filter(c => c.rapportFinancierId === sourceId);
+        if (!sourceCats.length) {
+          this.finishCloneCr(targetId);
+          return;
+        }
+
+        forkJoin(sourceCats.map(cat => this.categorieCrService.create({
+          nom: cat.nom ?? '',
+          rapportFinancierId: targetId
+        }))).subscribe({
+          next: (newCats) => {
+            const catIdMap = new Map<number, number>();
+            sourceCats.forEach((cat, index) => {
+              if (cat.id != null && newCats[index]?.id != null) {
+                catIdMap.set(cat.id, newCats[index].id as number);
+              }
+            });
+
+            const sourceSous = (sousCr ?? [])
+              .filter(sc => catIdMap.has(sc.categorieCrId));
+
+            forkJoin(sourceSous.map(sc => this.sousCategorieCrService.create({
+              nom: sc.nom ?? '',
+              categorieCrId: catIdMap.get(sc.categorieCrId) as number
+            }))).subscribe({
+              next: (newSous) => {
+                const sousIdMap = new Map<number, number>();
+                sourceSous.forEach((sc, index) => {
+                  if (sc.id != null && newSous[index]?.id != null) {
+                    sousIdMap.set(sc.id, newSous[index].id as number);
+                  }
+                });
+
+                const sousFinById = new Map<number, SousCategorieFinanciere>();
+                (sousFin ?? []).forEach(sc => {
+                  if (sc.id != null) sousFinById.set(sc.id, sc);
+                });
+
+                const catsFinById = new Map<number, CategorieFinanciere>();
+                (catsFin ?? []).forEach(cat => {
+                  if (cat.id != null) catsFinById.set(cat.id, cat);
+                });
+
+                const lineReportId = (line: LigneFinanciere): number | null => {
+                  const sousF = sousFinById.get(line.sousCategorieFinanciereId);
+                  if (!sousF) return null;
+                  const catF = catsFinById.get(sousF.categorieFinanciereId);
+                  return catF?.rapportFinancierId ?? null;
+                };
+
+                const sourceLines = (lignes ?? []).filter(line => lineReportId(line) === sourceId);
+                const targetLines = (lignes ?? []).filter(line => lineReportId(line) === targetId);
+
+                const targetIndex = new Map<string, LigneFinanciere>();
+                for (const line of targetLines) {
+                  const sousF = sousFinById.get(line.sousCategorieFinanciereId);
+                  const catF = sousF ? catsFinById.get(sousF.categorieFinanciereId) : undefined;
+                  const key = [
+                    this.normalizeLabel(catF?.nom),
+                    this.normalizeLabel(sousF?.nom),
+                    this.normalizeLabel(line.nom)
+                  ].join('||');
+                  targetIndex.set(key, line);
+                }
+
+                const updates = sourceLines
+                  .map(line => {
+                    const crLine = line as LigneFinanciereCr;
+                    if (crLine.id == null || !crLine.sousCategorieCrId) return null;
+
+                    const newSousId = sousIdMap.get(crLine.sousCategorieCrId);
+                    if (!newSousId) return null;
+
+                    const sousF = sousFinById.get(crLine.sousCategorieFinanciereId);
+                    const catF = sousF ? catsFinById.get(sousF.categorieFinanciereId) : undefined;
+                    const key = [
+                      this.normalizeLabel(catF?.nom),
+                      this.normalizeLabel(sousF?.nom),
+                      this.normalizeLabel(crLine.nom)
+                    ].join('||');
+
+                    const targetLine = targetIndex.get(key);
+                    if (!targetLine?.id) return null;
+
+                    return this.ligneService.update(targetLine.id, {
+                      ...targetLine,
+                      sousCategorieCrId: newSousId
+                    } as LigneFinanciere);
+                  })
+                  .filter((item): item is ReturnType<typeof this.ligneService.update> => item != null);
+
+                if (!updates.length) {
+                  this.finishCloneCr(targetId);
+                  return;
+                }
+
+                forkJoin(updates).subscribe({
+                  next: () => this.finishCloneCr(targetId),
+                  error: () => this.finishCloneCr(targetId)
+                });
+              },
+              error: () => this.finishCloneCr(targetId)
+            });
+          },
+          error: () => this.finishCloneCr(targetId)
+        });
+      },
+      error: () => this.finishCloneCr(targetId)
+    });
+  }
+
+  private finishCloneCr(rapportId: number): void {
+    this.loadData(rapportId);
+    this.loading.set(false);
+    this.cloneCrModalOpen.set(false);
+    this.selectedCloneCrSourceId.set(null);
   }
 }

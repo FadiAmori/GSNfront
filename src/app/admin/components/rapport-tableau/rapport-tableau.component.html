@@ -43,7 +43,7 @@
             *ngIf="block.type === 'calculee'"
             class="row-calculee mixed-item"
             cdkDrag
-            [style.background]="getTint(block.data)"
+            [style.background]="getColor(block.data)"
           >
             <td class="col-drag"><span class="drag-handle" cdkDragHandle>⋮⋮</span></td>
             <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(block.data)">
@@ -62,7 +62,7 @@
             <tr
               class="row-categorie mixed-item"
               cdkDrag
-              [style.background]="getTint(block.data)"
+              [style.background]="getColor(block.data)"
             >
               <td class="col-drag"><span class="drag-handle" cdkDragHandle>⋮⋮</span></td>
               <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(block.data)">
@@ -79,7 +79,14 @@
             </tr>
 
             <ng-container *ngFor="let sous of sousFor(block.data.id)">
-              <tr class="row-sous" [style.background]="getTint(sous)">
+              <tr
+                class="row-sous"
+                [style.background]="getColor(sous)"
+                [attr.draggable]="!isSociete()"
+                (dragstart)="onSousRowDragStart(sous.id)"
+                (dragover)="onRowDragOver($event)"
+                (drop)="onSousRowDrop(sous.id, block.data.id)"
+              >
                 <td class="col-drag"></td>
                 <td></td>
                 <td class="cell-strong" [style.border-left]="'4px solid ' + getColor(sous)">{{ sous.nom }}</td>
@@ -92,7 +99,15 @@
                 </td>
               </tr>
 
-              <tr *ngFor="let ligne of lignesFor(sous.id)" class="row-ligne" [style.background]="getTint(ligne)">
+              <tr
+                *ngFor="let ligne of lignesFor(sous.id)"
+                class="row-ligne"
+                [style.background]="getColor(ligne)"
+                [attr.draggable]="!isSociete()"
+                (dragstart)="onLigneRowDragStart(ligne.id)"
+                (dragover)="onRowDragOver($event)"
+                (drop)="onLigneRowDrop(ligne.id, sous.id)"
+              >
                 <td class="col-drag"></td>
                 <td></td>
                 <td></td>

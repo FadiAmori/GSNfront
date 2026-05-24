@@ -8,6 +8,7 @@
     <div class="header-actions">
       <a class="btn-back" [routerLink]="backLink()">← Retour</a>
       <a class="btn-secondary" [routerLink]="produitsLink()">Produits</a>
+      <button *ngIf="!isSociete()" type="button" class="btn-primary" (click)="openCloneCrModal()">Copier CR</button>
     </div>
   </header>
 
@@ -116,3 +117,74 @@
     </table>
   </div>
 </section>
+
+<div *ngIf="cloneCrModalOpen() && !isSociete()" class="modal-overlay" (click)="cancelCloneCr()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>Copier la structure CR</h2>
+      <button type="button" class="btn-close" (click)="cancelCloneCr()">×</button>
+    </header>
+
+    <div class="form-stack">
+      <p *ngIf="cloneCrLoading()" class="muted">Chargement des rapports source...</p>
+      <p *ngIf="!cloneCrLoading() && cloneCrSources().length === 0" class="muted">Aucun autre rapport disponible.</p>
+
+      <label>
+        Rapport source
+        <select
+          [ngModel]="selectedCloneCrSourceId()"
+          (ngModelChange)="onSelectCloneCrSource($event)"
+          [disabled]="cloneCrLoading() || cloneCrSources().length === 0"
+        >
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let src of cloneCrSources(); trackBy: trackById" [ngValue]="src.id">{{ src.label }}</option>
+        </select>
+      </label>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelCloneCr()">Annuler</button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="confirmCloneCr()"
+          [disabled]="!selectedCloneCrSourceId() || cloneCrLoading()"
+        >
+          Copier
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="cloneCrModalOpen() && !isSociete()" class="modal-overlay" (click)="cancelCloneCr()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>Copier la structure CR</h2>
+      <button type="button" class="btn-close" (click)="cancelCloneCr()">×</button>
+    </header>
+
+    <div class="form-stack">
+      <p *ngIf="cloneCrLoading()" class="muted">Chargement des rapports source...</p>
+      <p *ngIf="!cloneCrLoading() && cloneCrSources().length === 0" class="muted">Aucun autre rapport disponible.</p>
+      <label>
+        Rapport source
+        <select [ngModel]="selectedCloneCrSourceId()" (ngModelChange)="onSelectCloneCrSource($event)" [disabled]="cloneCrLoading() || cloneCrSources().length === 0">
+          <option [ngValue]="null">-- Choisir --</option>
+          <option *ngFor="let src of cloneCrSources(); trackBy: trackById" [ngValue]="src.id">{{ src.label }}</option>
+        </select>
+      </label>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn-ghost" (click)="cancelCloneCr()">Annuler</button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="confirmCloneCr()"
+          [disabled]="!selectedCloneCrSourceId() || loading()"
+        >
+          Copier
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

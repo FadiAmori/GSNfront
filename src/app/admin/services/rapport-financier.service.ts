@@ -29,6 +29,11 @@ export class RapportFinancierService {
     return this.http.post<RapportFinancier>(this.apiUrl, rapport);
   }
 
+  /** Create rapport for a specific societe via admin route if supported */
+  createForSociete(societeId: number, rapport: RapportFinancier): Observable<RapportFinancier> {
+    return this.http.post<RapportFinancier>(`${this.apiUrl}/societe/${societeId}`, rapport);
+  }
+
   update(id: number, rapport: RapportFinancier): Observable<void> {
     return this.http.put<void>(`${this.apiUrl}/${id}`, rapport);
   }
